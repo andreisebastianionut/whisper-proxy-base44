@@ -1,6 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from openai import OpenAI
+import openai
 import os
 import tempfile
 from typing import Dict
@@ -18,13 +18,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configurează clientul OpenAI
+# Configurează cheia API OpenAI
 openai_api_key = os.getenv("OPENAI_API_KEY")
 if not openai_api_key:
     raise ValueError("OPENAI_API_KEY nu este setată în variabilele de mediu!")
 
-# Inițializează clientul OpenAI cu sintaxa nouă
-client = OpenAI(api_key=openai_api_key)
+# Setează cheia API pentru openai (versiunea 1.3.8)
+openai.api_key = openai_api_key
 
 @app.get("/")
 async def root():
@@ -77,18 +77,21 @@ async def transcribe_audio(audio_file: UploadFile = File(...)) -> Dict[str, str]
             temp_file_path = temp_file.name
         
         try:
-            # Transcrie folosind OpenAI Whisper cu sintaxa nouă
+            # Transcrie folosind OpenAI Whisper (sintaxa pentru v1.3.8)
             with open(temp_file_path, "rb") as audio:
-                transcript = client.audio.transcriptions.create(
+                response = openai.Audio.transcribe(
                     model="whisper-1",
                     file=audio,
                     language="ro"  # Setează limba română
                 )
+                
+                # În versiunea 1.3.8, response este un dicționar
+                transcript_text = response.get("text", "") if isinstance(response, dict) else str(response)
             
             # Returnează rezultatul
             return {
                 "success": True,
-                "transcription": transcript.text,
+                "transcription": transcript_text,
                 "filename": audio_file.filename
             }
             
@@ -118,20 +121,20 @@ async def transcribe_info():
 async def test_openai_connection():
     """Test pentru a verifica conectivitatea cu OpenAI"""
     try:
-        # Testează doar dacă clientul OpenAI se poate inițializa
-        models = client.models.list()
+        # Testează conexiunea cu OpenAI (versiunea 1.3.8)
+        models = openai.Model.list()
         return {
             "status": "success",
             "message": "Conexiunea cu OpenAI funcționează",
             "api_key_present": bool(openai_api_key),
-            "client_initialized": True
+            "openai_configured": bool(openai.api_key)
         }
     except Exception as e:
         return {
             "status": "error", 
             "message": f"Eroare la conectarea cu OpenAI: {str(e)}",
             "api_key_present": bool(openai_api_key),
-            "client_initialized": False
+            "openai_configured": bool(openai.api_key)
         }
 
 @app.get("/health")
