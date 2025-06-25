@@ -77,7 +77,7 @@ async def transcribe_audio(audio_file: UploadFile = File(...)) -> Dict[str, str]
             temp_file_path = temp_file.name
         
         try:
-            # Transcrie folosind OpenAI Whisper (sintaxa pentru v1.3.8)
+            # Transcrie folosind OpenAI Whisper (versiunea 0.28.1)
             with open(temp_file_path, "rb") as audio:
                 response = openai.Audio.transcribe(
                     model="whisper-1",
@@ -85,8 +85,8 @@ async def transcribe_audio(audio_file: UploadFile = File(...)) -> Dict[str, str]
                     language="ro"  # Setează limba română
                 )
                 
-                # În versiunea 1.3.8, response este un dicționar
-                transcript_text = response.get("text", "") if isinstance(response, dict) else str(response)
+                # În versiunea 0.28, response e un dicționar cu cheia 'text'
+                transcript_text = response["text"] if isinstance(response, dict) else str(response)
             
             # Returnează rezultatul
             return {
